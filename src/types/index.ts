@@ -22,3 +22,14 @@ export type RecordSearchInput = {
   userId: string;
   cityName: string;
 };
+
+export type WeatherResponseDto = {
+  cityName: string;
+  temperatureC: number;
+  feelsLikeC: number;
+  humidity: number;
+  windSpeedMs: number;
+  weatherMain: string;
+  localTime: string;
+  clothingRecommendations: string[];
+};

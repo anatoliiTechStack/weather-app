@@ -51,6 +51,7 @@ export class MemoryCache {
       return cached;
     }
 
+    // Check if there is an in-flight promise for this key
     const existing = this.inflight.get(key);
     if (existing) {
       return existing as Promise<T>;
