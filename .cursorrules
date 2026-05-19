@@ -1,12 +1,12 @@
 # ============================================================================
 
-# CURSOR SYSTEM RULES - HIGH-OPTIMIZATION & TOKEN-EFFICIENCY PROMPT
+# CURSOR SYSTEM RULES - PRODUCTION-READY WEATHER APP CONFIGURATION
 
 # ============================================================================
 
 ## Target Architecture & Tech Stack
 
-- Framework: Next.js 14+ (App Router, Server Actions preferred over API routes where applicable)
+- Framework: Next.js 14+ (App Router)
 - Language: TypeScript (Strict Mode, No `any`, Explicit Return Types for Exports)
 - Database: PostgreSQL via Prisma ORM
 - State: Zustand (Slice Pattern, Hydration-Safe for SSR)
@@ -21,14 +21,24 @@
 
 ## TypeScript & Next.js Quality Standards
 
-- **Component Separation**: Enforce strict separation between Server Components (data fetching) and Client Components (interactivity via `"use client"`).
+- **Component Separation**: Enforce strict separation between Server Components (data fetching inside `src/app/`) and Client Components (interactivity via `"use client"`).
 - **Error Boundaries**: Every dynamic data-fetching boundary must be wrapped in a Next.js `error.tsx` and `loading.tsx` convention.
 - **Zustand Hydration**: Always implement a custom `useHydrated` hook or store wrapper to mitigate Next.js SSR hydration mismatches.
 - **Type Safety**: Generate explicit Zod schemas for external API payload validation (OpenWeatherMap data validation).
+
+## Strict Screen Architecture (Co-location Pattern)
+
+- **Routing Layer**: High-level pages under `src/app/` must only serve as Next.js routing entry points and Server Component data fetchers. They must _never_ contain UI markup directly. They must import layout compositions from `src/components/screens/`.
+- **Screen Directory Structure**: Every screen component must reside in `src/components/screens/[screen-name]/` and strictly follow this file convention:
+  - `[screen-name]-screen.tsx` (The main view component)
+  - `[screen-name].props.ts` (Strict TypeScript interfaces for the screen's props)
+  - `index.ts` (Clean named or default export of the screen component)
+- **Local Components**: If a screen requires sub-components (e.g., `city-card`), they must be isolated inside a local `components/` folder inside that specific screen's directory (e.g., `src/components/screens/[screen-name]/components/city-card/`). Replicate the same structure (component + props) locally. Do not leak local components into the global scope.
+- **Styling**: Do not create separate style/preset files. Write Tailwind CSS directly within the `.tsx` files.
 
 ## Code Review Protocol
 
 - Before finalizing code generation, internally verify:
   1. Are there circular dependencies?
-  2. Is the 10-minute caching layer respected?
+  2. Is the 10-minute caching layer respected inside the API/Service layer?
   3. Are sensitive API keys leaked to the client? (Enforce `process.env` on server-side only).
