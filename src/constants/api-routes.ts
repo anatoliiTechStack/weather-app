@@ -1,6 +1,7 @@
 export const API_ROUTES = {
   weather: "/api/weather",
   favorites: "/api/favorites",
+  searchHistory: "/api/search-history",
 } as const;
 
 export function buildWeatherQueryUrl(city: string): string {

@@ -12,6 +12,8 @@ const LOCAL_TIME_MESSAGE = "Local time:";
 const HUMIDITY_MESSAGE = "Humidity:";
 const WIND_SPEED_MESSAGE = "Wind speed:";
 const WIND_SPEED_UNIT = "m/s";
+const ADD_FAVORITE_LABEL = "Add to favorites";
+const IN_FAVORITES_LABEL = "In favorites";
 
 function weatherEmoji(main: string): string {
   const key = main.toLowerCase();
@@ -59,10 +61,30 @@ function WeatherSkeleton(): ReactElement {
   );
 }
 
+function StarIcon({ filled }: { filled: boolean }): ReactElement {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      aria-hidden
+    >
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>
+  );
+}
+
 export function WeatherMain(): ReactElement {
   const currentWeather = useWeatherStore((s) => s.currentWeather);
   const isLoading = useWeatherStore((s) => s.isLoading);
   const error = useWeatherStore((s) => s.error);
+  const favorites = useWeatherStore((s) => s.favorites);
+  const addFavorite = useWeatherStore((s) => s.addFavorite);
 
   if (isLoading) {
     return <WeatherSkeleton />;
@@ -89,16 +111,43 @@ export function WeatherMain(): ReactElement {
   }
 
   const w = currentWeather;
+  const isInFavorites = favorites.some(
+    (f) => f.cityName.toLowerCase() === w.cityName.trim().toLowerCase()
+  );
 
   return (
     <article className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
       <header className="mb-6 border-b border-zinc-100 pb-4 dark:border-zinc-800">
-        <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {w.cityName}
-        </h2>
-        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-          {LOCAL_TIME_MESSAGE} {w.localTime}
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              {w.cityName}
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+              {LOCAL_TIME_MESSAGE} {w.localTime}
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={isInFavorites}
+            aria-pressed={isInFavorites}
+            aria-label={isInFavorites ? IN_FAVORITES_LABEL : ADD_FAVORITE_LABEL}
+            title={isInFavorites ? IN_FAVORITES_LABEL : ADD_FAVORITE_LABEL}
+            onClick={() => {
+              void addFavorite(w.cityName);
+            }}
+            className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-default ${
+              isInFavorites
+                ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-200"
+                : "border-zinc-200 bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            }`}
+          >
+            <StarIcon filled={isInFavorites} />
+            <span className="hidden sm:inline">
+              {isInFavorites ? IN_FAVORITES_LABEL : ADD_FAVORITE_LABEL}
+            </span>
+          </button>
+        </div>
       </header>
 
       <div className="mb-6 flex flex-wrap items-end gap-4">

@@ -9,6 +9,7 @@ import {
 } from "@/constants";
 import type {
   FavoriteCityDto as FavoriteCity,
+  SearchHistoryEntryDto,
   WeatherResponseDto,
 } from "@/types";
 
@@ -17,10 +18,13 @@ const NETWORK_ERROR_MESSAGE = "Network error";
 type WeatherStore = {
   currentWeather: WeatherResponseDto | null;
   favorites: FavoriteCity[];
+  searchHistory: SearchHistoryEntryDto[];
   isLoading: boolean;
   error: string | null;
+  sidebarError: string | null;
   fetchWeather: (city: string) => Promise<void>;
   loadFavorites: () => Promise<void>;
+  loadSearchHistory: () => Promise<void>;
   addFavorite: (cityName: string) => Promise<void>;
   removeFavorite: (id: string) => Promise<void>;
 };
@@ -52,8 +56,10 @@ function upsertFavorite(
 export const useWeatherStore = create<WeatherStore>((set) => ({
   currentWeather: null,
   favorites: [],
+  searchHistory: [],
   isLoading: false,
   error: null,
+  sidebarError: null,
 
   fetchWeather: async (city: string) => {
     set({ isLoading: true, error: null });
@@ -71,6 +77,7 @@ export const useWeatherStore = create<WeatherStore>((set) => ({
 
       const data = (await res.json()) as WeatherResponseDto;
       set({ currentWeather: data, error: null });
+      void useWeatherStore.getState().loadSearchHistory();
     } catch {
       set({ currentWeather: null, error: NETWORK_ERROR_MESSAGE });
     } finally {
@@ -79,26 +86,38 @@ export const useWeatherStore = create<WeatherStore>((set) => ({
   },
 
   loadFavorites: async () => {
-    set({ isLoading: true, error: null });
     try {
       const res = await fetch(API_ROUTES.favorites);
 
       if (!res.ok) {
-        set({ error: await readApiErrorMessage(res) });
+        set({ sidebarError: await readApiErrorMessage(res) });
         return;
       }
 
       const data = (await res.json()) as FavoriteCity[];
-      set({ favorites: data, error: null });
+      set({ favorites: data, sidebarError: null });
     } catch {
-      set({ error: NETWORK_ERROR_MESSAGE });
-    } finally {
-      set({ isLoading: false });
+      set({ sidebarError: NETWORK_ERROR_MESSAGE });
+    }
+  },
+
+  loadSearchHistory: async () => {
+    try {
+      const res = await fetch(API_ROUTES.searchHistory);
+
+      if (!res.ok) {
+        set({ sidebarError: await readApiErrorMessage(res) });
+        return;
+      }
+
+      const data = (await res.json()) as SearchHistoryEntryDto[];
+      set({ searchHistory: data, sidebarError: null });
+    } catch {
+      set({ sidebarError: NETWORK_ERROR_MESSAGE });
     }
   },
 
   addFavorite: async (cityName: string) => {
-    set({ isLoading: true, error: null });
     try {
       const res = await fetch(API_ROUTES.favorites, {
         method: "POST",
@@ -110,7 +129,7 @@ export const useWeatherStore = create<WeatherStore>((set) => ({
         const favorite = (await res.json()) as FavoriteCity;
         set((state) => ({
           favorites: upsertFavorite(state.favorites, favorite),
-          error: null,
+          sidebarError: null,
         }));
         return;
       }
@@ -118,24 +137,21 @@ export const useWeatherStore = create<WeatherStore>((set) => ({
       if (res.status === HttpStatus.Conflict) {
         const listRes = await fetch(API_ROUTES.favorites);
         if (!listRes.ok) {
-          set({ error: await readApiErrorMessage(listRes) });
+          set({ sidebarError: await readApiErrorMessage(listRes) });
           return;
         }
         const list = (await listRes.json()) as FavoriteCity[];
-        set({ favorites: list, error: null });
+        set({ favorites: list, sidebarError: null });
         return;
       }
 
-      set({ error: await readApiErrorMessage(res) });
+      set({ sidebarError: await readApiErrorMessage(res) });
     } catch {
-      set({ error: NETWORK_ERROR_MESSAGE });
-    } finally {
-      set({ isLoading: false });
+      set({ sidebarError: NETWORK_ERROR_MESSAGE });
     }
   },
 
   removeFavorite: async (id: string) => {
-    set({ isLoading: true, error: null });
     try {
       const res = await fetch(buildFavoriteByIdUrl(id), {
         method: "DELETE",
@@ -144,16 +160,14 @@ export const useWeatherStore = create<WeatherStore>((set) => ({
       if (res.status === HttpStatus.NoContent) {
         set((state) => ({
           favorites: state.favorites.filter((f) => f.id !== id),
-          error: null,
+          sidebarError: null,
         }));
         return;
       }
 
-      set({ error: await readApiErrorMessage(res) });
+      set({ sidebarError: await readApiErrorMessage(res) });
     } catch {
-      set({ error: NETWORK_ERROR_MESSAGE });
-    } finally {
-      set({ isLoading: false });
+      set({ sidebarError: NETWORK_ERROR_MESSAGE });
     }
   },
 }));
