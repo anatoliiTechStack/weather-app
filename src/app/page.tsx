@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { ClothingRecommendations } from "@/components/ClothingRecommendations";
 import { SearchInput } from "@/components/SearchInput";
 import { WeatherMain } from "@/components/WeatherMain";
 
@@ -19,6 +20,7 @@ export default function Home(): ReactElement {
         </div>
         <SearchInput />
         <WeatherMain />
+        <ClothingRecommendations />
       </main>
     </div>
   );
