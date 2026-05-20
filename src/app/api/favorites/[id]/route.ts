@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { DEFAULT_USER_ID } from "@/app/api/favorites/constants";
+import { HttpStatus } from "@/constants/http-status";
 import { db } from "@/lib/db";
 
 export const runtime = "nodejs";
@@ -27,15 +28,15 @@ export async function DELETE(
     if (isResultEmpty) {
       return NextResponse.json(
         { error: "Favorite not found" },
-        { status: 404 }
+        { status: HttpStatus.NotFound },
       );
     }
 
-    return new NextResponse(null, { status: 204 });
+    return new NextResponse(null, { status: HttpStatus.NoContent });
   } catch {
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: HttpStatus.InternalServerError },
     );
   }
 }
