@@ -6,24 +6,20 @@ type CacheRecord<T> = {
 };
 
 export class MemoryCache {
-  // Map of cached values
   private readonly entries = new Map<string, CacheRecord<unknown>>();
-  // Map of in-flight promises
   private readonly inflight = new Map<string, Promise<unknown>>();
 
   get<T>(key: string): T | undefined {
     const record = this.entries.get(key);
-    if (!record) {
-      return undefined;
-    }
-
-    const isEntryExpired = Date.now() >= record.expiresAt;
-
-    if (isEntryExpired) {
-      this.entries.delete(key);
+    if (!record || !this.isFresh(record)) {
       return undefined;
     }
     return record.value as T;
+  }
+
+  peek<T>(key: string): T | undefined {
+    const record = this.entries.get(key);
+    return record ? (record.value as T) : undefined;
   }
 
   set<T>(key: string, value: T, ttlMs: number = DEFAULT_TTL_MS): void {
@@ -46,40 +42,76 @@ export class MemoryCache {
     factory: () => Promise<T>,
     ttlMs: number = DEFAULT_TTL_MS
   ): Promise<T> {
-    const cached = this.get<T>(key);
-    if (cached !== undefined) {
-      return cached;
+    const record = this.entries.get(key);
+
+    if (record) {
+      const value = record.value as T;
+
+      if (!this.isFresh(record)) {
+        this.revalidateInBackground(key, factory, ttlMs);
+      }
+
+      return value;
     }
 
-    // Check if there is an in-flight promise for this key
+    return this.fetchAndStore(key, factory, ttlMs);
+  }
+
+  clear(): void {
+    this.entries.clear();
+    this.inflight.clear();
+  }
+
+  private isFresh(record: CacheRecord<unknown>): boolean {
+    return Date.now() < record.expiresAt;
+  }
+
+  private revalidateInBackground<T>(
+    key: string,
+    factory: () => Promise<T>,
+    ttlMs: number
+  ): void {
+    if (this.inflight.has(key)) {
+      return;
+    }
+
+    const promise = this.runFactory(key, factory, ttlMs)
+      .catch(() => {
+        // Keep serving stale entry when background refresh fails.
+      })
+      .finally(() => {
+        this.inflight.delete(key);
+      });
+
+    this.inflight.set(key, promise);
+  }
+
+  private async fetchAndStore<T>(
+    key: string,
+    factory: () => Promise<T>,
+    ttlMs: number
+  ): Promise<T> {
     const existing = this.inflight.get(key);
     if (existing) {
       return existing as Promise<T>;
     }
 
-    const promise = new Promise<T>((resolve, reject) => {
-      queueMicrotask(() => {
-        void (async () => {
-          try {
-            const value = await factory();
-            this.set(key, value, ttlMs);
-            resolve(value);
-          } catch (error) {
-            reject(error);
-          } finally {
-            this.inflight.delete(key);
-          }
-        })();
-      });
+    const promise = this.runFactory(key, factory, ttlMs).finally(() => {
+      this.inflight.delete(key);
     });
 
     this.inflight.set(key, promise);
     return promise;
   }
 
-  clear(): void {
-    this.entries.clear();
-    this.inflight.clear();
+  private async runFactory<T>(
+    key: string,
+    factory: () => Promise<T>,
+    ttlMs: number
+  ): Promise<T> {
+    const value = await factory();
+    this.set(key, value, ttlMs);
+    return value;
   }
 }
 
