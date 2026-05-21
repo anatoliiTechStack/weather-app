@@ -8,8 +8,8 @@ const SECTION_TITLE = "3-day forecast";
 const MIN_MAX_SEPARATOR = "–";
 
 export function ForecastThreeDay(): ReactElement | null {
-  const currentWeather = useWeatherStore((s) => s.currentWeather);
-  const isLoading = useWeatherStore((s) => s.isLoading);
+  const currentWeather = useWeatherStore((state) => state.currentWeather);
+  const isLoading = useWeatherStore((state) => state.isLoading);
 
   if (isLoading) {
     return (

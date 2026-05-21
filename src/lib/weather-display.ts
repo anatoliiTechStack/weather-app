@@ -1,5 +1,5 @@
-export function weatherEmoji(main: string): string {
-  const key = main.toLowerCase();
+export function weatherEmoji(weatherMain: string): string {
+  const key = weatherMain.toLowerCase();
   switch (true) {
     case key.includes("clear"):
       return "☀️";
@@ -18,7 +18,7 @@ export function weatherEmoji(main: string): string {
   }
 }
 
-export function formatOneDecimal(n: number): string {
-  const rounded = Math.round(n * 10) / 10;
+export function formatOneDecimal(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
   return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }

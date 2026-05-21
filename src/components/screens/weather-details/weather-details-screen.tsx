@@ -15,7 +15,7 @@ const DESCRIPTION =
 export function WeatherDetailsScreen({
   citySlug,
 }: WeatherDetailsScreenProps): ReactElement {
-  const fetchWeather = useWeatherStore((s) => s.fetchWeather);
+  const fetchWeather = useWeatherStore((state) => state.fetchWeather);
   const cityName = slugToCity(citySlug);
 
   useEffect(() => {

@@ -13,9 +13,11 @@ const REMOVE_LABEL = "Remove from favorites";
 const VIEW_WEATHER_PREFIX = "View weather for";
 
 function formatCityLabel(cityName: string): string {
-  const t = cityName.trim();
-  if (!t) return t;
-  return t.charAt(0).toLocaleUpperCase() + t.slice(1);
+  const trimmedCityName = cityName.trim();
+  if (!trimmedCityName) return trimmedCityName;
+  return (
+    trimmedCityName.charAt(0).toLocaleUpperCase() + trimmedCityName.slice(1)
+  );
 }
 
 function TrashIcon(): ReactElement {
@@ -41,10 +43,10 @@ function TrashIcon(): ReactElement {
 }
 
 export function FavoritesScreen(): ReactElement {
-  const favorites = useWeatherStore((s) => s.favorites);
-  const sidebarError = useWeatherStore((s) => s.sidebarError);
-  const loadFavorites = useWeatherStore((s) => s.loadFavorites);
-  const removeFavorite = useWeatherStore((s) => s.removeFavorite);
+  const favorites = useWeatherStore((state) => state.favorites);
+  const sidebarError = useWeatherStore((state) => state.sidebarError);
+  const loadFavorites = useWeatherStore((state) => state.loadFavorites);
+  const removeFavorite = useWeatherStore((state) => state.removeFavorite);
 
   useEffect(() => {
     void loadFavorites();

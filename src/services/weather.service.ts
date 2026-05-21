@@ -156,7 +156,7 @@ export class WeatherService {
     forecastRaw: OwmForecastResponse,
     uvIndex: number | null,
   ): WeatherResponseDto {
-    const weatherMains = raw.weather.map((item) => item.main);
+    const weatherMains = raw.weather.map((condition) => condition.main);
     const timezone = raw.timezone ?? forecastRaw.city.timezone;
 
     return {
@@ -239,10 +239,12 @@ export class WeatherService {
         break;
     }
 
-    const hasPrecipitation = weatherMains.some((main) =>
-      PRECIPITATION_CONDITIONS.has(main),
+    const hasPrecipitation = weatherMains.some((weatherMain) =>
+      PRECIPITATION_CONDITIONS.has(weatherMain),
     );
-    const hasSnow = weatherMains.some((main) => SNOW_CONDITIONS.has(main));
+    const hasSnow = weatherMains.some((weatherMain) =>
+      SNOW_CONDITIONS.has(weatherMain),
+    );
 
     if (hasSnow) {
       recommendations.push("Waterproof boots and warm socks");
