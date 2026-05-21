@@ -103,8 +103,8 @@ function GroupBlock({
 }
 
 export function ClothingRecommendations(): ReactElement | null {
-  const currentWeather = useWeatherStore((s) => s.currentWeather);
-  const isLoading = useWeatherStore((s) => s.isLoading);
+  const currentWeather = useWeatherStore((state) => state.currentWeather);
+  const isLoading = useWeatherStore((state) => state.isLoading);
 
   const grouped = useMemo(() => {
     if (isLoading || !currentWeather?.clothingRecommendations?.length) {
@@ -113,16 +113,16 @@ export function ClothingRecommendations(): ReactElement | null {
     const clothing: string[] = [];
     const accessories: string[] = [];
     const tips: string[] = [];
-    for (const line of currentWeather.clothingRecommendations) {
-      switch (categorizeRecommendation(line)) {
+    for (const recommendation of currentWeather.clothingRecommendations) {
+      switch (categorizeRecommendation(recommendation)) {
         case "accessories":
-          accessories.push(line);
+          accessories.push(recommendation);
           break;
         case "tips":
-          tips.push(line);
+          tips.push(recommendation);
           break;
         default:
-          clothing.push(line);
+          clothing.push(recommendation);
       }
     }
     return { clothing, accessories, tips };
@@ -138,7 +138,7 @@ export function ClothingRecommendations(): ReactElement | null {
       { group: "accessories" as const, items: grouped.accessories },
       { group: "tips" as const, items: grouped.tips },
     ] as const
-  ).filter((b) => b.items.length > 0);
+  ).filter((block) => block.items.length > 0);
 
   const isBlocksEmpty = blocks.length === 0;
   const isBlocksMedium = blocks.length === 2;

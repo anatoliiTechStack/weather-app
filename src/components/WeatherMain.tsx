@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { buildWeatherCityPath } from "@/constants/app-routes";
+import { formatOneDecimal, weatherEmoji } from "@/lib/weather-display";
 import { useWeatherStore } from "@/store/useWeatherStore";
 
 export type WeatherMainVariant = "summary" | "full";
@@ -17,37 +18,16 @@ const EMPTY_MESSAGE =
   "Enter the city name and press «Search» to see current weather.";
 const FEELS_LIKE_MESSAGE = "Feels like:";
 const LOCAL_TIME_MESSAGE = "Local time:";
-const HUMIDITY_MESSAGE = "Humidity:";
-const WIND_SPEED_MESSAGE = "Wind speed:";
+const HUMIDITY_MESSAGE = "Humidity";
+const WIND_SPEED_MESSAGE = "Wind speed";
+const UV_INDEX_MESSAGE = "UV index";
+const SUNRISE_MESSAGE = "Sunrise";
+const SUNSET_MESSAGE = "Sunset";
 const WIND_SPEED_UNIT = "m/s";
+const UV_UNAVAILABLE = "N/A";
 const ADD_FAVORITE_LABEL = "Add to favorites";
 const IN_FAVORITES_LABEL = "In favorites";
 const DETAILS_LINK_LABEL = "View full details";
-
-function weatherEmoji(main: string): string {
-  const key = main.toLowerCase();
-  switch (true) {
-    case key.includes("clear"):
-      return "☀️";
-    case key.includes("cloud"):
-      return "☁️";
-    case key.includes("rain") || key.includes("drizzle"):
-      return "🌧️";
-    case key.includes("snow"):
-      return "❄️";
-    case key.includes("thunder"):
-      return "⛈️";
-    case key.includes("mist") || key.includes("fog") || key.includes("haze"):
-      return "🌫️";
-    default:
-      return "🌤️";
-  }
-}
-
-function formatOneDecimal(n: number): string {
-  const rounded = Math.round(n * 10) / 10;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-}
 
 function WeatherSkeleton(): ReactElement {
   return (
@@ -62,7 +42,10 @@ function WeatherSkeleton(): ReactElement {
       <div className="mb-6 h-4 w-56 rounded bg-zinc-200 dark:bg-zinc-700" />
       <div className="mb-2 h-14 w-32 rounded bg-zinc-200 dark:bg-zinc-700" />
       <div className="mb-6 h-4 w-48 rounded bg-zinc-200 dark:bg-zinc-700" />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
         <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
         <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
       </div>
@@ -91,11 +74,11 @@ function StarIcon({ filled }: { filled: boolean }): ReactElement {
 export function WeatherMain({
   variant = "full",
 }: WeatherMainProps): ReactElement {
-  const currentWeather = useWeatherStore((s) => s.currentWeather);
-  const isLoading = useWeatherStore((s) => s.isLoading);
-  const error = useWeatherStore((s) => s.error);
-  const favorites = useWeatherStore((s) => s.favorites);
-  const addFavorite = useWeatherStore((s) => s.addFavorite);
+  const currentWeather = useWeatherStore((state) => state.currentWeather);
+  const isLoading = useWeatherStore((state) => state.isLoading);
+  const error = useWeatherStore((state) => state.error);
+  const favorites = useWeatherStore((state) => state.favorites);
+  const addFavorite = useWeatherStore((state) => state.addFavorite);
   const isSummary = variant === "summary";
 
   if (isLoading) {
@@ -122,11 +105,13 @@ export function WeatherMain({
     );
   }
 
-  const w = currentWeather;
+  const weather = currentWeather;
   const isInFavorites = favorites.some(
-    (f) => f.cityName.toLowerCase() === w.cityName.trim().toLowerCase()
+    (favorite) =>
+      favorite.cityName.toLowerCase() ===
+      weather.cityName.trim().toLowerCase(),
   );
-  const detailsHref = buildWeatherCityPath(w.cityName);
+  const detailsHref = buildWeatherCityPath(weather.cityName);
 
   return (
     <article className="w-full max-w-xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -134,10 +119,10 @@ export function WeatherMain({
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              {w.cityName}
+              {weather.cityName}
             </h2>
             <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-              {LOCAL_TIME_MESSAGE} {w.localTime}
+              {LOCAL_TIME_MESSAGE} {weather.localTime}
             </p>
           </div>
           {!isSummary ? (
@@ -150,7 +135,7 @@ export function WeatherMain({
               }
               title={isInFavorites ? IN_FAVORITES_LABEL : ADD_FAVORITE_LABEL}
               onClick={() => {
-                void addFavorite(w.cityName);
+                void addFavorite(weather.cityName);
               }}
               className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 disabled:cursor-default ${
                 isInFavorites
@@ -170,7 +155,7 @@ export function WeatherMain({
       <div className="mb-6 flex flex-wrap items-end gap-4">
         <div>
           <p className="text-5xl font-light tabular-nums text-zinc-900 dark:text-zinc-50">
-            {formatOneDecimal(w.temperatureC)}
+            {formatOneDecimal(weather.temperatureC)}
             <span className="text-3xl font-normal text-zinc-400 dark:text-zinc-500">
               °C
             </span>
@@ -178,16 +163,16 @@ export function WeatherMain({
           <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
             {FEELS_LIKE_MESSAGE}
             <span className="font-medium text-zinc-800 dark:text-zinc-200">
-              {formatOneDecimal(w.feelsLikeC)}°C
+              {formatOneDecimal(weather.feelsLikeC)}°C
             </span>
           </p>
         </div>
         <div className="flex items-center gap-2 rounded-xl bg-zinc-50 px-3 py-2 dark:bg-zinc-800/80">
           <span className="text-3xl" aria-hidden>
-            {weatherEmoji(w.weatherMain)}
+            {weatherEmoji(weather.weatherMain)}
           </span>
           <span className="text-sm font-medium uppercase tracking-wide text-zinc-700 dark:text-zinc-300">
-            {w.weatherMain}
+            {weather.weatherMain}
           </span>
         </div>
       </div>
@@ -200,13 +185,13 @@ export function WeatherMain({
           {DETAILS_LINK_LABEL} →
         </Link>
       ) : (
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               {HUMIDITY_MESSAGE}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-              {w.humidity}%
+              {weather.humidity}%
             </dd>
           </div>
           <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
@@ -214,7 +199,31 @@ export function WeatherMain({
               {WIND_SPEED_MESSAGE}
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
-              {formatOneDecimal(w.windSpeedMs)} {WIND_SPEED_UNIT}
+              {formatOneDecimal(weather.windSpeedMs)} {WIND_SPEED_UNIT}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {UV_INDEX_MESSAGE}
+            </dt>
+            <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+              {weather.uvIndex !== null ? formatOneDecimal(weather.uvIndex) : UV_UNAVAILABLE}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {SUNRISE_MESSAGE}
+            </dt>
+            <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+              {weather.sunriseLocal}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {SUNSET_MESSAGE}
+            </dt>
+            <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+              {weather.sunsetLocal}
             </dd>
           </div>
         </dl>

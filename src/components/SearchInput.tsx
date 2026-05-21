@@ -14,13 +14,13 @@ const LABEL_TEXT = "City";
 const BUTTON_TEXT = "Search";
 
 export function SearchInput(): ReactElement {
-  const fetchWeather = useWeatherStore((s) => s.fetchWeather);
+  const fetchWeather = useWeatherStore((state) => state.fetchWeather);
   const [value, setValue] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleSubmit = useCallback(
-    (e: FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
       const trimmedValue = value.trim();
       if (!trimmedValue) {
         setValidationError(VALIDATION_ERROR_MESSAGE);
@@ -49,8 +49,8 @@ export function SearchInput(): ReactElement {
           autoComplete="off"
           placeholder={PLACEHOLDER_TEXT}
           value={value}
-          onChange={(e) => {
-            setValue(e.target.value);
+          onChange={(event) => {
+            setValue(event.target.value);
             if (validationError) setValidationError(null);
           }}
           className="h-11 w-full rounded-lg border border-zinc-200 bg-white px-3 text-base text-zinc-900 outline-none ring-sky-500/40 placeholder:text-zinc-400 focus:border-sky-500 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500"

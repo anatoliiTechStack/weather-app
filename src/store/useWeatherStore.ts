@@ -49,7 +49,9 @@ function upsertFavorite(
   favorites: FavoriteCity[],
   favorite: FavoriteCity
 ): FavoriteCity[] {
-  const rest = favorites.filter((f) => f.id !== favorite.id);
+  const rest = favorites.filter(
+    (existing) => existing.id !== favorite.id,
+  );
   return [favorite, ...rest];
 }
 
@@ -159,7 +161,9 @@ export const useWeatherStore = create<WeatherStore>((set) => ({
 
       if (res.status === HttpStatus.NoContent) {
         set((state) => ({
-          favorites: state.favorites.filter((f) => f.id !== id),
+          favorites: state.favorites.filter(
+            (existing) => existing.id !== id,
+          ),
           sidebarError: null,
         }));
         return;

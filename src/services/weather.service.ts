@@ -1,7 +1,12 @@
+import { formatUnixUtcToLocalTime } from "@/lib/local-time";
 import type { WeatherResponseDto } from "@/types";
+import { buildForecastDays } from "@/services/forecast.builder";
 import {
   owmCurrentWeatherResponseSchema,
+  owmForecastResponseSchema,
+  owmOneCallResponseSchema,
   type OwmCurrentWeatherResponse,
+  type OwmForecastResponse,
 } from "@/services/schemas/owm.schema";
 import {
   DEFAULT_OWM_BASE_URL,
@@ -33,12 +38,24 @@ export class WeatherService {
 
   async fetchWeatherByCity(city: string): Promise<WeatherResponseDto> {
     const trimmedCity = this.parseCityName(city);
-    const response = await fetch(this.buildWeatherRequestUrl(trimmedCity));
+    const [currentResponse, forecastResponse] = await Promise.all([
+      fetch(this.buildWeatherRequestUrl(trimmedCity)),
+      fetch(this.buildForecastRequestUrl(trimmedCity)),
+    ]);
 
-    this.assertOwmHttpResponse(response);
+    this.assertOwmHttpResponse(currentResponse);
+    this.assertOwmHttpResponse(forecastResponse);
 
-    const raw = await this.parseOwmPayload(await response.json());
-    return this.mapToDto(raw);
+    const currentRaw = await this.parseOwmPayload(await currentResponse.json());
+    const forecastRaw = await this.parseOwmForecastPayload(
+      await forecastResponse.json(),
+    );
+    const uvIndex = await this.fetchUvIndex(
+      currentRaw.coord.lat,
+      currentRaw.coord.lon,
+    );
+
+    return this.mapToDto(currentRaw, forecastRaw, uvIndex);
   }
 
   private parseCityName(city: string): string {
@@ -50,11 +67,46 @@ export class WeatherService {
   }
 
   private buildWeatherRequestUrl(city: string): URL {
-    const url = new URL(`${this.getBaseUrl()}/weather`);
+    return this.buildOwmRequestUrl("/weather", city);
+  }
+
+  private buildForecastRequestUrl(city: string): URL {
+    return this.buildOwmRequestUrl("/forecast", city);
+  }
+
+  private buildOwmRequestUrl(path: string, city: string): URL {
+    const url = new URL(`${this.getBaseUrl()}${path}`);
     url.searchParams.set("q", city);
     url.searchParams.set("appid", this.getApiKey());
     url.searchParams.set("units", "metric");
     return url;
+  }
+
+  private buildOneCallRequestUrl(lat: number, lon: number): URL {
+    const url = new URL(`${this.getBaseUrl()}/onecall`);
+    url.searchParams.set("lat", String(lat));
+    url.searchParams.set("lon", String(lon));
+    url.searchParams.set("appid", this.getApiKey());
+    url.searchParams.set("exclude", "minutely,hourly,daily,alerts");
+    return url;
+  }
+
+  private async fetchUvIndex(lat: number, lon: number): Promise<number | null> {
+    try {
+      const response = await fetch(this.buildOneCallRequestUrl(lat, lon));
+      if (!response.ok) {
+        return null;
+      }
+
+      const parsed = owmOneCallResponseSchema.safeParse(await response.json());
+      if (!parsed.success) {
+        return null;
+      }
+
+      return Math.round(parsed.data.current.uvi * 10) / 10;
+    } catch {
+      return null;
+    }
   }
 
   private assertOwmHttpResponse(response: Response): void {
@@ -79,15 +131,33 @@ export class WeatherService {
     if (!parsed.success) {
       throw WeatherServiceError.create(
         "INVALID_PAYLOAD",
-        "OpenWeatherMap response failed validation",
+        "OpenWeatherMap current weather response failed validation",
       );
     }
 
     return parsed.data;
   }
 
-  private mapToDto(raw: OwmCurrentWeatherResponse): WeatherResponseDto {
-    const weatherMains = raw.weather.map((item) => item.main);
+  private parseOwmForecastPayload(payload: unknown): OwmForecastResponse {
+    const parsed = owmForecastResponseSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      throw WeatherServiceError.create(
+        "INVALID_PAYLOAD",
+        "OpenWeatherMap forecast response failed validation",
+      );
+    }
+
+    return parsed.data;
+  }
+
+  private mapToDto(
+    raw: OwmCurrentWeatherResponse,
+    forecastRaw: OwmForecastResponse,
+    uvIndex: number | null,
+  ): WeatherResponseDto {
+    const weatherMains = raw.weather.map((condition) => condition.main);
+    const timezone = raw.timezone ?? forecastRaw.city.timezone;
 
     return {
       cityName: raw.name,
@@ -96,21 +166,20 @@ export class WeatherService {
       humidity: raw.main.humidity,
       windSpeedMs: raw.wind.speed,
       weatherMain: weatherMains[0] ?? "Unknown",
-      localTime: this.buildLocalTime(raw.timezone),
+      localTime: formatUnixUtcToLocalTime(
+        Math.floor(Date.now() / 1000),
+        timezone,
+      ),
+      sunriseLocal: formatUnixUtcToLocalTime(raw.sys.sunrise, timezone),
+      sunsetLocal: formatUnixUtcToLocalTime(raw.sys.sunset, timezone),
+      uvIndex,
       clothingRecommendations: this.buildClothingRecommendations(
         raw.main.temp,
         raw.main.feels_like,
         weatherMains,
       ),
+      forecastDays: buildForecastDays(forecastRaw.list, timezone),
     };
-  }
-
-  private buildLocalTime(timezoneOffsetSeconds: number): string {
-    const localMs = Date.now() + timezoneOffsetSeconds * 1000;
-    const localDate = new Date(localMs);
-    const hours = localDate.getUTCHours().toString().padStart(2, "0");
-    const minutes = localDate.getUTCMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes}`;
   }
 
   private resolveTemperatureBand(tempC: number): TemperatureBand {
@@ -170,10 +239,12 @@ export class WeatherService {
         break;
     }
 
-    const hasPrecipitation = weatherMains.some((main) =>
-      PRECIPITATION_CONDITIONS.has(main),
+    const hasPrecipitation = weatherMains.some((weatherMain) =>
+      PRECIPITATION_CONDITIONS.has(weatherMain),
     );
-    const hasSnow = weatherMains.some((main) => SNOW_CONDITIONS.has(main));
+    const hasSnow = weatherMains.some((weatherMain) =>
+      SNOW_CONDITIONS.has(weatherMain),
+    );
 
     if (hasSnow) {
       recommendations.push("Waterproof boots and warm socks");
@@ -183,6 +254,9 @@ export class WeatherService {
     }
     if (weatherMains.includes("Thunderstorm")) {
       recommendations.push("Stay indoors if possible");
+    }
+    if (tempC > 25 || feelsLikeC > 25) {
+      recommendations.push("Wear sunglasses");
     }
 
     return [...new Set(recommendations)];

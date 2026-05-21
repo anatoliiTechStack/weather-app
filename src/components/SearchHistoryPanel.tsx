@@ -11,9 +11,11 @@ const EMPTY_HISTORY = "History is empty — perform a search.";
 const PANEL_ARIA_LABEL = "Recent searches";
 
 function formatCityLabel(cityName: string): string {
-  const t = cityName.trim();
-  if (!t) return t;
-  return t.charAt(0).toLocaleUpperCase() + t.slice(1);
+  const trimmedCityName = cityName.trim();
+  if (!trimmedCityName) return trimmedCityName;
+  return (
+    trimmedCityName.charAt(0).toLocaleUpperCase() + trimmedCityName.slice(1)
+  );
 }
 
 function dedupeHistoryByCity(
@@ -33,9 +35,9 @@ function dedupeHistoryByCity(
 }
 
 export function SearchHistoryPanel(): ReactElement {
-  const searchHistory = useWeatherStore((s) => s.searchHistory);
-  const sidebarError = useWeatherStore((s) => s.sidebarError);
-  const loadSearchHistory = useWeatherStore((s) => s.loadSearchHistory);
+  const searchHistory = useWeatherStore((state) => state.searchHistory);
+  const sidebarError = useWeatherStore((state) => state.sidebarError);
+  const loadSearchHistory = useWeatherStore((state) => state.loadSearchHistory);
 
   useEffect(() => {
     void loadSearchHistory();
