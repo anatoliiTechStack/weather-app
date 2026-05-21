@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { DEFAULT_USER_ID } from "@/app/api/favorites/constants";
+import { HttpStatus } from "@/constants/http-status";
 import { toFavoriteCityDto } from "@/app/api/favorites/favorites.mapper";
 import { db } from "@/lib/db";
 
@@ -24,7 +25,10 @@ export async function GET(): Promise<NextResponse> {
 
     return NextResponse.json(favorites.map(toFavoriteCityDto));
   } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: HttpStatus.InternalServerError },
+    );
   }
 }
 
@@ -36,7 +40,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.issues[0]?.message ?? "Invalid request body" },
-        { status: 400 },
+        { status: HttpStatus.BadRequest },
       );
     }
 
@@ -47,7 +51,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       },
     });
 
-    return NextResponse.json(toFavoriteCityDto(favorite), { status: 201 });
+    return NextResponse.json(toFavoriteCityDto(favorite), {
+      status: HttpStatus.Created,
+    });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -55,10 +61,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     ) {
       return NextResponse.json(
         { error: "City is already in favorites" },
-        { status: 409 },
+        { status: HttpStatus.Conflict },
       );
     }
 
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: HttpStatus.InternalServerError },
+    );
   }
 }

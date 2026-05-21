@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { cache } from "@/lib/cache";
 import { db } from "@/lib/db";
+import { HttpStatus } from "@/constants/http-status";
 import {
   weatherService,
   WeatherServiceError,
@@ -52,19 +53,34 @@ function toErrorResponse(error: unknown): NextResponse {
   if (error instanceof WeatherServiceError) {
     switch (error.code) {
       case "NOT_FOUND":
-        return NextResponse.json({ error: error.message }, { status: 404 });
+        return NextResponse.json(
+          { error: error.message },
+          { status: HttpStatus.NotFound },
+        );
       case "VALIDATION":
       case "INVALID_PAYLOAD":
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json(
+          { error: error.message },
+          { status: HttpStatus.BadRequest },
+        );
       case "RATE_LIMIT":
-        return NextResponse.json({ error: error.message }, { status: 503 });
+        return NextResponse.json(
+          { error: error.message },
+          { status: HttpStatus.ServiceUnavailable },
+        );
       case "UPSTREAM":
       case "CONFIG":
-        return NextResponse.json({ error: error.message }, { status: 502 });
+        return NextResponse.json(
+          { error: error.message },
+          { status: HttpStatus.BadGateway },
+        );
     }
   }
 
-  return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  return NextResponse.json(
+    { error: "Internal server error" },
+    { status: HttpStatus.InternalServerError },
+  );
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {

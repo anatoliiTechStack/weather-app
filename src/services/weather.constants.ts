@@ -1,3 +1,4 @@
+import { HttpStatus } from "@/constants/http-status";
 import type { WeatherServiceErrorCode } from "@/services/weather.errors";
 
 export const DEFAULT_OWM_BASE_URL = "https://api.openweathermap.org/data/2.5";
@@ -16,7 +17,13 @@ export type OwmHttpErrorDefinition = {
 };
 
 export const OWM_HTTP_ERRORS = new Map<number, OwmHttpErrorDefinition>([
-  [404, { code: "NOT_FOUND", message: "City not found" }],
-  [401, { code: "CONFIG", message: "Invalid OpenWeatherMap API key" }],
-  [429, { code: "RATE_LIMIT", message: "OpenWeatherMap rate limit exceeded" }],
+  [HttpStatus.NotFound, { code: "NOT_FOUND", message: "City not found" }],
+  [
+    HttpStatus.Unauthorized,
+    { code: "CONFIG", message: "Invalid OpenWeatherMap API key" },
+  ],
+  [
+    HttpStatus.TooManyRequests,
+    { code: "RATE_LIMIT", message: "OpenWeatherMap rate limit exceeded" },
+  ],
 ]);
