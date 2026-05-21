@@ -56,7 +56,7 @@ function WeatherSkeleton(): ReactElement {
 function StarIcon({ filled }: { filled: boolean }): ReactElement {
   return (
     <svg
-      xmlns="http://wwweather.w3.org/2000/svg"
+      xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 24 24"
       fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
