@@ -39,6 +39,9 @@ export type WeatherResponseDto = {
   windSpeedMs: number;
   weatherMain: string;
   localTime: string;
+  sunriseLocal: string;
+  sunsetLocal: string;
+  uvIndex: number | null;
   clothingRecommendations: string[];
   forecastDays: ForecastDayDto[];
 };

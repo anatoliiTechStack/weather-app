@@ -1,8 +1,10 @@
+import { formatUnixUtcToLocalTime } from "@/lib/local-time";
 import type { WeatherResponseDto } from "@/types";
 import { buildForecastDays } from "@/services/forecast.builder";
 import {
   owmCurrentWeatherResponseSchema,
   owmForecastResponseSchema,
+  owmOneCallResponseSchema,
   type OwmCurrentWeatherResponse,
   type OwmForecastResponse,
 } from "@/services/schemas/owm.schema";
@@ -48,8 +50,12 @@ export class WeatherService {
     const forecastRaw = await this.parseOwmForecastPayload(
       await forecastResponse.json(),
     );
+    const uvIndex = await this.fetchUvIndex(
+      currentRaw.coord.lat,
+      currentRaw.coord.lon,
+    );
 
-    return this.mapToDto(currentRaw, forecastRaw);
+    return this.mapToDto(currentRaw, forecastRaw, uvIndex);
   }
 
   private parseCityName(city: string): string {
@@ -74,6 +80,33 @@ export class WeatherService {
     url.searchParams.set("appid", this.getApiKey());
     url.searchParams.set("units", "metric");
     return url;
+  }
+
+  private buildOneCallRequestUrl(lat: number, lon: number): URL {
+    const url = new URL(`${this.getBaseUrl()}/onecall`);
+    url.searchParams.set("lat", String(lat));
+    url.searchParams.set("lon", String(lon));
+    url.searchParams.set("appid", this.getApiKey());
+    url.searchParams.set("exclude", "minutely,hourly,daily,alerts");
+    return url;
+  }
+
+  private async fetchUvIndex(lat: number, lon: number): Promise<number | null> {
+    try {
+      const response = await fetch(this.buildOneCallRequestUrl(lat, lon));
+      if (!response.ok) {
+        return null;
+      }
+
+      const parsed = owmOneCallResponseSchema.safeParse(await response.json());
+      if (!parsed.success) {
+        return null;
+      }
+
+      return Math.round(parsed.data.current.uvi * 10) / 10;
+    } catch {
+      return null;
+    }
   }
 
   private assertOwmHttpResponse(response: Response): void {
@@ -121,6 +154,7 @@ export class WeatherService {
   private mapToDto(
     raw: OwmCurrentWeatherResponse,
     forecastRaw: OwmForecastResponse,
+    uvIndex: number | null,
   ): WeatherResponseDto {
     const weatherMains = raw.weather.map((item) => item.main);
     const timezone = raw.timezone ?? forecastRaw.city.timezone;
@@ -132,7 +166,13 @@ export class WeatherService {
       humidity: raw.main.humidity,
       windSpeedMs: raw.wind.speed,
       weatherMain: weatherMains[0] ?? "Unknown",
-      localTime: this.buildLocalTime(timezone),
+      localTime: formatUnixUtcToLocalTime(
+        Math.floor(Date.now() / 1000),
+        timezone,
+      ),
+      sunriseLocal: formatUnixUtcToLocalTime(raw.sys.sunrise, timezone),
+      sunsetLocal: formatUnixUtcToLocalTime(raw.sys.sunset, timezone),
+      uvIndex,
       clothingRecommendations: this.buildClothingRecommendations(
         raw.main.temp,
         raw.main.feels_like,
@@ -140,14 +180,6 @@ export class WeatherService {
       ),
       forecastDays: buildForecastDays(forecastRaw.list, timezone),
     };
-  }
-
-  private buildLocalTime(timezoneOffsetSeconds: number): string {
-    const localMs = Date.now() + timezoneOffsetSeconds * 1000;
-    const localDate = new Date(localMs);
-    const hours = localDate.getUTCHours().toString().padStart(2, "0");
-    const minutes = localDate.getUTCMinutes().toString().padStart(2, "0");
-    return `${hours}:${minutes}`;
   }
 
   private resolveTemperatureBand(tempC: number): TemperatureBand {
@@ -220,6 +252,9 @@ export class WeatherService {
     }
     if (weatherMains.includes("Thunderstorm")) {
       recommendations.push("Stay indoors if possible");
+    }
+    if (tempC > 25 || feelsLikeC > 25) {
+      recommendations.push("Wear sunglasses");
     }
 
     return [...new Set(recommendations)];

@@ -10,7 +10,7 @@ import { useWeatherStore } from "@/store/useWeatherStore";
 
 const TITLE = "Weather details";
 const DESCRIPTION =
-  "Wind, humidity, local time, and personalized clothing recommendations.";
+  "Wind, humidity, UV index, sunrise and sunset (local time), and clothing recommendations.";
 
 export function WeatherDetailsScreen({
   citySlug,

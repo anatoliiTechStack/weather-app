@@ -18,9 +18,13 @@ const EMPTY_MESSAGE =
   "Enter the city name and press «Search» to see current weather.";
 const FEELS_LIKE_MESSAGE = "Feels like:";
 const LOCAL_TIME_MESSAGE = "Local time:";
-const HUMIDITY_MESSAGE = "Humidity:";
-const WIND_SPEED_MESSAGE = "Wind speed:";
+const HUMIDITY_MESSAGE = "Humidity";
+const WIND_SPEED_MESSAGE = "Wind speed";
+const UV_INDEX_MESSAGE = "UV index";
+const SUNRISE_MESSAGE = "Sunrise";
+const SUNSET_MESSAGE = "Sunset";
 const WIND_SPEED_UNIT = "m/s";
+const UV_UNAVAILABLE = "N/A";
 const ADD_FAVORITE_LABEL = "Add to favorites";
 const IN_FAVORITES_LABEL = "In favorites";
 const DETAILS_LINK_LABEL = "View full details";
@@ -38,7 +42,10 @@ function WeatherSkeleton(): ReactElement {
       <div className="mb-6 h-4 w-56 rounded bg-zinc-200 dark:bg-zinc-700" />
       <div className="mb-2 h-14 w-32 rounded bg-zinc-200 dark:bg-zinc-700" />
       <div className="mb-6 h-4 w-48 rounded bg-zinc-200 dark:bg-zinc-700" />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
         <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
         <div className="h-16 rounded-lg bg-zinc-200 dark:bg-zinc-700" />
       </div>
@@ -176,7 +183,7 @@ export function WeatherMain({
           {DETAILS_LINK_LABEL} →
         </Link>
       ) : (
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               {HUMIDITY_MESSAGE}
@@ -191,6 +198,30 @@ export function WeatherMain({
             </dt>
             <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
               {formatOneDecimal(w.windSpeedMs)} {WIND_SPEED_UNIT}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {UV_INDEX_MESSAGE}
+            </dt>
+            <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+              {w.uvIndex !== null ? formatOneDecimal(w.uvIndex) : UV_UNAVAILABLE}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {SUNRISE_MESSAGE}
+            </dt>
+            <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+              {w.sunriseLocal}
+            </dd>
+          </div>
+          <div className="rounded-xl border border-zinc-100 bg-zinc-50/80 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+            <dt className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              {SUNSET_MESSAGE}
+            </dt>
+            <dd className="mt-1 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+              {w.sunsetLocal}
             </dd>
           </div>
         </dl>

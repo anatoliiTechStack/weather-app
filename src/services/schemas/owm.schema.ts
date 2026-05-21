@@ -4,9 +4,19 @@ export const owmWeatherConditionSchema = z.object({
   main: z.string(),
 });
 
+export const owmCoordSchema = z.object({
+  lat: z.number(),
+  lon: z.number(),
+});
+
 export const owmCurrentWeatherResponseSchema = z.object({
   name: z.string(),
   timezone: z.number().int(),
+  coord: owmCoordSchema,
+  sys: z.object({
+    sunrise: z.number().int(),
+    sunset: z.number().int(),
+  }),
   main: z.object({
     temp: z.number(),
     feels_like: z.number(),
@@ -16,6 +26,12 @@ export const owmCurrentWeatherResponseSchema = z.object({
     speed: z.number(),
   }),
   weather: z.array(owmWeatherConditionSchema).min(1),
+});
+
+export const owmOneCallResponseSchema = z.object({
+  current: z.object({
+    uvi: z.number(),
+  }),
 });
 
 export type OwmCurrentWeatherResponse = z.infer<
@@ -42,3 +58,4 @@ export const owmForecastResponseSchema = z.object({
 
 export type OwmForecastListItem = z.infer<typeof owmForecastListItemSchema>;
 export type OwmForecastResponse = z.infer<typeof owmForecastResponseSchema>;
+export type OwmOneCallResponse = z.infer<typeof owmOneCallResponseSchema>;
