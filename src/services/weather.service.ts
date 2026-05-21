@@ -1,7 +1,10 @@
 import type { WeatherResponseDto } from "@/types";
+import { buildForecastDays } from "@/services/forecast.builder";
 import {
   owmCurrentWeatherResponseSchema,
+  owmForecastResponseSchema,
   type OwmCurrentWeatherResponse,
+  type OwmForecastResponse,
 } from "@/services/schemas/owm.schema";
 import {
   DEFAULT_OWM_BASE_URL,
@@ -33,12 +36,20 @@ export class WeatherService {
 
   async fetchWeatherByCity(city: string): Promise<WeatherResponseDto> {
     const trimmedCity = this.parseCityName(city);
-    const response = await fetch(this.buildWeatherRequestUrl(trimmedCity));
+    const [currentResponse, forecastResponse] = await Promise.all([
+      fetch(this.buildWeatherRequestUrl(trimmedCity)),
+      fetch(this.buildForecastRequestUrl(trimmedCity)),
+    ]);
 
-    this.assertOwmHttpResponse(response);
+    this.assertOwmHttpResponse(currentResponse);
+    this.assertOwmHttpResponse(forecastResponse);
 
-    const raw = await this.parseOwmPayload(await response.json());
-    return this.mapToDto(raw);
+    const currentRaw = await this.parseOwmPayload(await currentResponse.json());
+    const forecastRaw = await this.parseOwmForecastPayload(
+      await forecastResponse.json(),
+    );
+
+    return this.mapToDto(currentRaw, forecastRaw);
   }
 
   private parseCityName(city: string): string {
@@ -50,7 +61,15 @@ export class WeatherService {
   }
 
   private buildWeatherRequestUrl(city: string): URL {
-    const url = new URL(`${this.getBaseUrl()}/weather`);
+    return this.buildOwmRequestUrl("/weather", city);
+  }
+
+  private buildForecastRequestUrl(city: string): URL {
+    return this.buildOwmRequestUrl("/forecast", city);
+  }
+
+  private buildOwmRequestUrl(path: string, city: string): URL {
+    const url = new URL(`${this.getBaseUrl()}${path}`);
     url.searchParams.set("q", city);
     url.searchParams.set("appid", this.getApiKey());
     url.searchParams.set("units", "metric");
@@ -79,15 +98,32 @@ export class WeatherService {
     if (!parsed.success) {
       throw WeatherServiceError.create(
         "INVALID_PAYLOAD",
-        "OpenWeatherMap response failed validation",
+        "OpenWeatherMap current weather response failed validation",
       );
     }
 
     return parsed.data;
   }
 
-  private mapToDto(raw: OwmCurrentWeatherResponse): WeatherResponseDto {
+  private parseOwmForecastPayload(payload: unknown): OwmForecastResponse {
+    const parsed = owmForecastResponseSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      throw WeatherServiceError.create(
+        "INVALID_PAYLOAD",
+        "OpenWeatherMap forecast response failed validation",
+      );
+    }
+
+    return parsed.data;
+  }
+
+  private mapToDto(
+    raw: OwmCurrentWeatherResponse,
+    forecastRaw: OwmForecastResponse,
+  ): WeatherResponseDto {
     const weatherMains = raw.weather.map((item) => item.main);
+    const timezone = raw.timezone ?? forecastRaw.city.timezone;
 
     return {
       cityName: raw.name,
@@ -96,12 +132,13 @@ export class WeatherService {
       humidity: raw.main.humidity,
       windSpeedMs: raw.wind.speed,
       weatherMain: weatherMains[0] ?? "Unknown",
-      localTime: this.buildLocalTime(raw.timezone),
+      localTime: this.buildLocalTime(timezone),
       clothingRecommendations: this.buildClothingRecommendations(
         raw.main.temp,
         raw.main.feels_like,
         weatherMains,
       ),
+      forecastDays: buildForecastDays(forecastRaw.list, timezone),
     };
   }
 

@@ -23,6 +23,14 @@ export type RecordSearchInput = {
   cityName: string;
 };
 
+export type ForecastDayDto = {
+  date: string;
+  dayLabel: string;
+  minTemperatureC: number;
+  maxTemperatureC: number;
+  weatherMain: string;
+};
+
 export type WeatherResponseDto = {
   cityName: string;
   temperatureC: number;
@@ -32,4 +40,5 @@ export type WeatherResponseDto = {
   weatherMain: string;
   localTime: string;
   clothingRecommendations: string[];
+  forecastDays: ForecastDayDto[];
 };

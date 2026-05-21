@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactElement } from "react";
 import { buildWeatherCityPath } from "@/constants/app-routes";
+import { formatOneDecimal, weatherEmoji } from "@/lib/weather-display";
 import { useWeatherStore } from "@/store/useWeatherStore";
 
 export type WeatherMainVariant = "summary" | "full";
@@ -23,31 +24,6 @@ const WIND_SPEED_UNIT = "m/s";
 const ADD_FAVORITE_LABEL = "Add to favorites";
 const IN_FAVORITES_LABEL = "In favorites";
 const DETAILS_LINK_LABEL = "View full details";
-
-function weatherEmoji(main: string): string {
-  const key = main.toLowerCase();
-  switch (true) {
-    case key.includes("clear"):
-      return "☀️";
-    case key.includes("cloud"):
-      return "☁️";
-    case key.includes("rain") || key.includes("drizzle"):
-      return "🌧️";
-    case key.includes("snow"):
-      return "❄️";
-    case key.includes("thunder"):
-      return "⛈️";
-    case key.includes("mist") || key.includes("fog") || key.includes("haze"):
-      return "🌫️";
-    default:
-      return "🌤️";
-  }
-}
-
-function formatOneDecimal(n: number): string {
-  const rounded = Math.round(n * 10) / 10;
-  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
-}
 
 function WeatherSkeleton(): ReactElement {
   return (
