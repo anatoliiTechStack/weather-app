@@ -8,23 +8,22 @@ type DayBucket = {
   mains: string[];
 };
 
-function localDateKey(epochMs: number, timezoneOffsetSeconds: number): string {
-  const localMs = epochMs + timezoneOffsetSeconds * 1000;
-  const date = new Date(localMs);
+function formatDateKeyFromDate(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  const dayOfMonth = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${dayOfMonth}`;
+}
+
+function localDateKey(epochMs: number, timezoneOffsetSeconds: number): string {
+  const localMs = epochMs + timezoneOffsetSeconds * 1000;
+  return formatDateKeyFromDate(new Date(localMs));
 }
 
 function addDaysToDateKey(dateKey: string, days: number): string {
   const [yearPart, monthPart, dayPart] = dateKey.split("-").map(Number);
   const utcMs = Date.UTC(yearPart, monthPart - 1, dayPart + days, 12, 0, 0);
-  const shiftedDate = new Date(utcMs);
-  const year = shiftedDate.getUTCFullYear();
-  const month = String(shiftedDate.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(shiftedDate.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return formatDateKeyFromDate(new Date(utcMs));
 }
 
 function buildDayLabel(dateKey: string, todayKey: string): string {
@@ -35,12 +34,11 @@ function buildDayLabel(dateKey: string, todayKey: string): string {
     return "Tomorrow";
   }
 
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const weekdayMs = Date.UTC(year, month - 1, day, 12, 0, 0);
-  const weekday = new Date(weekdayMs).toLocaleDateString("en-US", {
+  const [yearPart, monthPart, dayPart] = dateKey.split("-").map(Number);
+  const weekdayMs = Date.UTC(yearPart, monthPart - 1, dayPart, 12, 0, 0);
+  return new Date(weekdayMs).toLocaleDateString("en-US", {
     weekday: "short",
   });
-  return weekday;
 }
 
 function dominantWeatherMain(mains: string[]): string {
